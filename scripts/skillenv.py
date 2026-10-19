@@ -285,6 +285,28 @@ def npx_command(node, osn=None, exists=os.path.isfile):
     return [w] if w else None
 
 
+# ------------------------------------------------------------------ config.json, speech language
+def config():
+    """The user's config.json ({} when missing). No secrets live there."""
+    try:
+        with open(os.path.join(SKILL_DIR, 'config.json'), encoding='utf-8') as f:
+            rec = json.load(f)
+        return rec if isinstance(rec, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def whisper_choice(stage, cfg=None):
+    """-> (model name, language or None) for faster-whisper. stage: 'ingest' (fast) or 'cut' (accurate).
+    config.json "language": "en" (default) uses the English-only models; any other code ("hi" Hindi, "es"...) or
+    "auto" uses the multilingual ones. English-only models turn other languages into confident English nonsense,
+    and small is too weak for Hindi, so non-English always gets medium."""
+    lang = ((cfg if cfg is not None else config()).get('language') or 'en').lower()
+    if lang == 'en':
+        return ('small.en' if stage == 'ingest' else 'medium.en'), 'en'
+    return 'medium', (None if lang == 'auto' else lang)
+
+
 # ------------------------------------------------------------------ .platform.json
 def load():
     """The machine record written by setup.py, or {} when it is missing, unreadable or from another machine
@@ -308,9 +330,18 @@ def tool(name):
     return find_tool(name)[0] or name
 
 
-def hyperframes_env(node=None, ffmpeg=None, environ=None, pathsep=os.pathsep, dirname=os.path.dirname):
+def headless_shell(home=None):
+    """Newest Chrome Headless Shell that `hyperframes browser ensure` downloaded, or None."""
+    home = home or os.path.expanduser('~')
+    pat = os.path.join(home, '.cache', 'hyperframes', 'chrome', 'chrome-headless-shell', '*', '*', 'chrome-headless-shell*')
+    exes = [p for p in glob.glob(pat) if os.path.isfile(p) and os.path.basename(p).split('.')[0] == 'chrome-headless-shell']
+    return max(exes, key=os.path.getmtime) if exes else None
+
+
+def hyperframes_env(node=None, ffmpeg=None, environ=None, pathsep=os.pathsep, dirname=os.path.dirname, osn=None):
     """Environment for a HyperFrames run: the chosen Node and ffmpeg folders first on PATH, anonymous usage
-    telemetry off unless the user set it themselves."""
+    telemetry off unless the user set it themselves. Windows: point HyperFrames at its own headless shell, because
+    probing the installed Chrome (`chrome.exe --version`) hangs there and fails the render."""
     env = dict(os.environ if environ is None else environ)
     key = next((k for k in env if k.upper() == 'PATH'), 'PATH')
     parts = [p for p in env.get(key, '').split(pathsep) if p]
@@ -320,6 +351,10 @@ def hyperframes_env(node=None, ffmpeg=None, environ=None, pathsep=os.pathsep, di
             parts = [d] + [p for p in parts if p != d]
     env[key] = pathsep.join(parts)
     env.setdefault('HYPERFRAMES_NO_TELEMETRY', '1')
+    if (osn or os_name()[0]) == 'windows' and not env.get('HYPERFRAMES_BROWSER_PATH'):
+        shell = headless_shell()
+        if shell:
+            env['HYPERFRAMES_BROWSER_PATH'] = shell
     return env
 
 

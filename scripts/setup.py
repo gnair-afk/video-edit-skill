@@ -8,7 +8,8 @@ Run it with whichever Python the machine has:   python3 setup.py   |   python se
   2. Node 22+ (HyperFrames renders with it; an nvm / Homebrew / installer copy is picked up even when an older
      Node is the default)
   3. Python 3.10+ and a venv inside the skill with faster-whisper + Pillow (transcription, head tracking)
-  4. Sound effects in assets/template/assets/sfx (not bundled: the Pixabay license forbids redistributing the files)
+  4. Sound effects in assets/template/assets/sfx, generated with ElevenLabs and cached in the audio library
+  5. Windows: a Chrome Headless Shell for HyperFrames renders
 
 Prints a STATUS line per item, each with the fix for THIS machine, then READY or NOT READY. Exit code 0 only when
 everything is ready. Writes <skill>/.platform.json (os, arch, the venv Python, how to start npx) so the other
@@ -20,13 +21,11 @@ import os
 import shutil
 import subprocess
 import sys
-import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import skillenv  # noqa: E402
 
-SFX_NAMES = ['whoosh-short', 'pop', 'sparkle', 'click', 'click-soft', 'impact-bass-1']
-SFX_URL = 'https://raw.githubusercontent.com/heygen-com/hyperframes/main/skills/media-use/audio/assets/sfx'
+SFX_NAMES = ['whoosh-short', 'pop', 'sparkle', 'click', 'click-soft', 'impact-bass-1']   # = elevenlabs.SFX_PACK
 RESTART = 'then quit Claude Code completely, reopen it and run /video-edit again'
 
 
@@ -179,25 +178,10 @@ def check_python(info):
     return False, py
 
 
-# ------------------------------------------------------------------ 4. sound effects
-def fetch(url, dest):
-    tmp = dest + '.part'
-    try:
-        with urllib.request.urlopen(url, timeout=30) as r, open(tmp, 'wb') as f:
-            shutil.copyfileobj(r, f)
-    except Exception:   # no certificates in a python.org macOS install, offline, proxy... try the system curl
-        curl = shutil.which('curl')
-        if curl:
-            subprocess.run([curl, '-fsSL', url, '-o', tmp], capture_output=True)
-    if os.path.isfile(tmp) and os.path.getsize(tmp) > 0:
-        os.replace(tmp, dest)
-        return True
-    if os.path.isfile(tmp):
-        os.remove(tmp)   # our own empty partial download, nothing of the user's
-    return False
-
-
-def check_sfx():
+# ------------------------------------------------------------------ 4. sound effects (ElevenLabs)
+def check_sfx(py):
+    """The template's SFX are generated with ElevenLabs (scripts/elevenlabs.py sfx-pack) and cached in the audio
+    library. setup never spends credits: it copies cached ones into the template and reports what is missing."""
     sfx = os.path.join(skillenv.SKILL_DIR, 'assets', 'template', 'assets', 'sfx')
     os.makedirs(sfx, exist_ok=True)
 
@@ -205,24 +189,36 @@ def check_sfx():
         p = os.path.join(sfx, n + '.mp3')
         return os.path.isfile(p) and os.path.getsize(p) > 0
 
-    home = os.path.expanduser('~')
-    for lib in (os.path.join(home, '.claude', 'skills', 'media-use', 'audio', 'assets', 'sfx'),
-                os.path.join(home, '.agents', 'skills', 'media-use', 'audio', 'assets', 'sfx')):
-        for n in SFX_NAMES:
-            src = os.path.join(lib, n + '.mp3')
-            if not have(n) and os.path.isfile(src):
-                shutil.copyfile(src, os.path.join(sfx, n + '.mp3'))
-    # not found locally: fetch them from the HyperFrames repo, which publishes this Pixabay-licensed pack
-    for n in SFX_NAMES:
-        if not have(n):
-            fetch(f'{SFX_URL}/{n}.mp3', os.path.join(sfx, n + '.mp3'))
+    if py and not all(have(n) for n in SFX_NAMES):
+        subprocess.run([py, os.path.join(skillenv.SKILL_DIR, 'scripts', 'elevenlabs.py'), 'sfx-pack', '--cached-only'],
+                       **skillenv.TEXT)   # copies cached sounds, never calls ElevenLabs
     missing = [n for n in SFX_NAMES if not have(n)]
     if not missing:
-        say('STATUS sound effects OK')
+        say('STATUS sound effects OK (ElevenLabs, cached)')
     else:
-        say(f"STATUS sound effects MISSING: {' '.join(missing)} -> optional. Download similar free SFX from https://pixabay.com/sound-effects/")
-        say(f'        and save them as {os.path.join(sfx, "<name>.mp3")}, then re-run this script.')
+        cmd = f'"{skillenv.shell_path(py or "PY")}" "{skillenv.shell_path(os.path.join(skillenv.SKILL_DIR, "scripts", "elevenlabs.py"))}" sfx-pack'
+        say(f"STATUS sound effects MISSING: {' '.join(missing)} -> optional. Generate them with ElevenLabs "
+            f'(about {200 * len(missing)} credits, once): {cmd}')
     return not missing
+
+
+# ------------------------------------------------------------------ 5. render browser (Windows)
+def check_browser(osn, py_ok):
+    """HyperFrames renders with Chrome. On Windows it probes the installed Chrome with `chrome.exe --version`, which
+    opens a window instead of printing and times out, so give it its own headless shell (114 MB, once)."""
+    if osn != 'windows' or not py_ok:
+        return True
+    exe = skillenv.headless_shell()
+    if not exe:
+        say('STATUS render browser: downloading Chrome Headless Shell for HyperFrames (~114 MB, once)')
+        argv, env = skillenv.hyperframes_command(['browser', 'ensure'])
+        subprocess.run(argv, env=env, **skillenv.TEXT)
+        exe = skillenv.headless_shell()
+    if exe:
+        say('STATUS render browser OK (Chrome Headless Shell)')
+        return True
+    say('STATUS render browser MISSING -> run: "PY" "SK/scripts/hf.py" browser ensure --force')
+    return False
 
 
 # ------------------------------------------------------------------ main
@@ -237,8 +233,9 @@ def main():
     ff_ok, ffmpeg, ffprobe = check_ffmpeg(osn)
     node_ok, node, node_ver, npx = check_node(osn)
     py_ok, py = check_python(info)
-    sfx_ok = check_sfx()
-    ready = ff_ok and node_ok and py_ok
+    sfx_ok = check_sfx(py if py_ok else None)
+    browser_ok = check_browser(osn, py_ok and node_ok)
+    ready = ff_ok and node_ok and py_ok and browser_ok
 
     sp = skillenv.shell_path
     record = {
@@ -255,6 +252,7 @@ def main():
         'hyperframes': skillenv.HYPERFRAMES,
         'cutout': provider,
         'sfx': sfx_ok,
+        'browser': sp(skillenv.headless_shell()),
     }
     with open(skillenv.PLATFORM_FILE, 'w', encoding='utf-8') as f:
         json.dump(record, f, indent=1)

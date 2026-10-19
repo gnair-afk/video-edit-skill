@@ -13,7 +13,7 @@ Sections of the example (segment ids come from segments.json, written by scripts
 
 Machinery to keep: dude_words(), cards(), girl(), orbit(), core(), claude_window(), skill_card(), ig_overlay(),
 grades(), audio(), SAFE_GUIDE, cut times from segments.json, S(t).
-Content to rewrite: GROUPS, CARDS, GIRL_BLOCKS, TRACK, SERIF, overlay files + in-times, SFX, SHIFT reference times.
+Content to rewrite: GROUPS, CARDS, GIRL_BLOCKS, TRACK, SERIF, overlay files + in-times, SFX, MUSIC, SHIFT reference times.
 
 Run from the project folder with PY, the skill's Python (see SKILL.md):
 PY build.py            writes index.html
@@ -325,14 +325,32 @@ SFX = [('whoosh-short', .12, .25), ('whoosh-short', 3.58, .22), ('whoosh-short',
        ('whoosh-short', CLAUDE_IN, .25), ('whoosh-short', DUDE_A, .3),
        ('pop', 2.40, .18), ('pop', 4.80, .18),
        ('click', IG_IN + IG_TAPS[0], .7), ('click-soft', IG_IN + IG_TAPS[1], .6)]
-SFX_LEN = {'whoosh-short': .57, 'pop': .72, 'sparkle': 1.8, 'click': .3, 'click-soft': .37}
 SFX_GAIN = 0.75   # sounds sit 25% under the original levels: subtle, never louder than the voice
+# ElevenLabs background music (SK/scripts/elevenlabs.py music ... --out assets/music/bgm.mp3, faded already).
+# Quiet bed under the voice; None or a missing file = no music.
+MUSIC = 'assets/music/bgm.mp3'
+MUSIC_GAIN = 0.10
+
+def media_len(path):
+    r = subprocess.run([shutil.which('ffprobe') or 'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                        '-of', 'csv=p=0', path], capture_output=True, encoding='utf-8', errors='replace')
+    try:
+        return float(r.stdout.strip())
+    except ValueError:
+        return 0.0
 
 
 def audio():
-    out, lanes = [], []
+    out, lanes, lens = [], [], {}
+    if MUSIC and os.path.isfile(MUSIC):
+        out.append(f'<audio id="bgm" src="{MUSIC}" data-start="0" data-media-start="0" '
+                   f'data-duration="{min(DUR, media_len(MUSIC)):.3f}" data-track-index="3" data-volume="{MUSIC_GAIN:.3f}"></audio>')
     for k, (name, t, vol) in enumerate(sorted(SFX, key=lambda x: x[1])):
-        d = min(SFX_LEN[name], DUR - t)
+        if name not in lens:   # ElevenLabs sounds vary in length: measure the file instead of a fixed table
+            lens[name] = media_len(f'assets/sfx/{name}.mp3')
+        d = min(lens[name], DUR - t)
+        if d <= 0:
+            continue
         lane = next((i for i, end in enumerate(lanes) if end <= t), None)
         if lane is None:
             lanes.append(0); lane = len(lanes) - 1

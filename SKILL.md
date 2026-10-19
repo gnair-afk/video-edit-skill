@@ -22,17 +22,21 @@ on Windows that is `C:/Users/<name>/.claude/skills/video-edit`.
 
 Look for `SK/config.json`.
 
-**If it exists:** load it (name, instagram handle, default look, folders), run the setup script exactly as in
+**If it exists and `setupComplete` is true:** load it (name, instagram handle, default look, folders), run the setup script exactly as in
 step 3 below (a few seconds: it only checks, and repairs the environment after an update), read "This machine",
 and go to Step 1 once it prints READY.
 
-**If it does not exist:**
+**If it does not exist, or `setupComplete` is false** (keep any values already in it, ask only for the empty ones):
 1. Say: "Welcome to /video-edit! Let's get you set up. This takes about 2 minutes and only happens once."
 2. Ask, in one message:
    - Your name (used on your Instagram profile insert)
    - Your Instagram handle (for your profile insert and to pull your reels for the orbit effect)
    - Default look: **bold** (kinetic words behind your head), **cool girl** (warm, yellow serif italic, your reels
-     orbiting you) or **cool dude** (dark editorial, tracked caps + serif). Offer bold if they are unsure.
+     orbiting you), **cool dude** (dark editorial, tracked caps + serif) or **explainer** (cream card on top, you
+     below, pill captions). Offer bold if they are unsure.
+   - The language they speak in (config.json `language`: `en`, `hi`, ... or `auto`) and, if not English, how
+     captions should be written (`captionScript`, e.g. `roman-hinglish` = Hindi words in Latin letters). English-only
+     Whisper models turn other languages into confident English nonsense, so never skip this.
    - Where your raw clips usually land (default `~/Downloads`) and where projects should live (default `~/reel-edits`)
 3. Run the setup script with whichever Python the machine has. Try these in order until one prints STATUS lines:
    `python3 "SK/scripts/setup.py"`, then `python "SK/scripts/setup.py"`, then `py -3 "SK/scripts/setup.py"`.
@@ -44,8 +48,9 @@ and go to Step 1 once it prints READY.
      brew on Mac, apt on Linux). Give it to the user and stop until the script prints READY.
    - Windows: the user pastes the winget lines into their own PowerShell window (winget asks them to agree to its
      terms the first time), then quits Claude Code completely and reopens it, or the new programs are not found.
-   - The script downloads the 6 sound effects itself. If it still reports them MISSING (offline), that is optional:
-     the reel just has no SFX until they are added.
+   - Sound effects come from ElevenLabs (see "ElevenLabs audio" below). setup only copies cached ones and never
+     spends credits. Reported MISSING: run `PY "SK/scripts/elevenlabs.py" sfx-pack` once (about 1,200 credits).
+     No ElevenLabs key yet: optional, the reel just has no SFX.
 4. Optional, Apify (pulls reels and profile stats automatically): try a simple Apify MCP call. If it is not
    connected, say it is optional and how to add it:
    1. Create a free account at https://apify.com and copy the API token from Settings > API & Integrations.
@@ -57,7 +62,8 @@ and go to Step 1 once it prints READY.
 5. Save `SK/config.json` (no secrets, ever):
    ```json
    {"name": "...", "instagram": "handle-without-@", "defaultLook": "bold", "clipsDir": "~/Downloads",
-    "projectsDir": "~/reel-edits", "setupComplete": true, "setupDate": "YYYY-MM-DD"}
+    "projectsDir": "~/reel-edits", "envFile": "<folder>/.env", "audioLibrary": "<folder>/library",
+    "minCreditsLeft": 500, "setupComplete": true, "setupDate": "YYYY-MM-DD"}
    ```
 6. Say: "Setup complete! Running /video-edit now..." and continue.
 
@@ -82,12 +88,33 @@ One command style that works in zsh, bash, Git Bash and PowerShell:
 - One command per call. No `&&`, no `VAR=1 command`, no `~` inside arguments, no `source`, no `zsh`.
 - `ffmpeg` and `ffprobe` are on PATH on every OS (setup checks it), so one-off ffmpeg commands are the same everywhere.
 
+## ElevenLabs audio (sound effects, music)
+
+All of it goes through `PY "SK/scripts/elevenlabs.py"` (stdlib only). Never call the API another way, never use
+Pixabay or other stock SFX.
+- Key: `ELEVENLABS_API_KEY` in the `.env` file named by config.json `envFile` (else `SK/.env`). Never print it,
+  never ask the user to paste it into the chat: tell them which file to open and paste it into themselves.
+- Credits: before every paid call the script logs `ELEVENLABS <what>: estimated cost N credits | M left` and exits
+  with code 3 when the call would leave fewer than config.json `minCreditsLeft` (default 500). Exit 3: stop, tell
+  the user how many credits are left, and carry on without that sound. Rates: SFX 200 per generation, music 900 per
+  minute. `--dry-run` shows the estimate and spends nothing; `credits` shows the balance.
+- Library: every result is cached in config.json `audioLibrary` (index.json lists the prompts). Same request = free.
+  Reuse existing sounds before generating new ones.
+- Sound effects: `sfx-pack` makes the six template sounds. A new sound for a reel:
+  `PY "SK/scripts/elevenlabs.py" sfx "<short concrete prompt>" --seconds 0.6 --name <name> --out "<project>/assets/sfx/<name>.mp3"`.
+- Music (once per reel, after the cut is locked, length = the reel): pick a prompt that fits the look, always instrumental:
+  `PY "SK/scripts/elevenlabs.py" music "<genre, mood, tempo, instruments>" --seconds <DUR> --out "<project>/assets/music/bgm.mp3"`.
+  The project copy is faded in and out; build.py plays it at `MUSIC_GAIN` (0.10) under the voice.
+- No ElevenLabs voice isolator: the user decided it costs too many credits (1,000 per minute) for the gain.
+
 ## Hard rules
 1. Everything inside the Reels safe zone: top 220, bottom 450 (nothing below y 1470), sides 35, right 100 from y 1155.
 2. Never cover the face with text or cards. Behind-head words show at least ~70% of each letter.
-3. Captions say what was actually said: fix Whisper's mishearings of names and keywords ("Claude" often comes out
+3. Captions say what was actually said (non-English: transcribe in that language, then write the captions in
+   config.json `captionScript`, word timing from words.json): fix Whisper's mishearings of names and keywords ("Claude" often comes out
    as "cloud"/"claws", "skill" as "scale"). No em dashes in on-screen text.
-4. Sound effects subtle (template `SFX_GAIN = 0.75` of the base volumes), never louder than the voice.
+4. Sound effects subtle (template `SFX_GAIN = 0.75` of the base volumes), music a quiet bed (`MUSIC_GAIN = 0.10`),
+   neither ever louder than the voice.
 5. Credit other creators on screen (@handle) whenever their reels appear. Real numbers on the user's own profile;
    anything else (commenters, chat history) is a generic placeholder, never a real person, never fabricated proof.
 6. Prove cuts from the final render, not from snapshots.
@@ -134,7 +161,7 @@ duration, beats locked to the word times, transparent webm out. Keep building th
 
 ### 6. Build
 Copy `SK/assets/template/` into the project (build.py, hyperframes.json, package.json, assets/fonts, assets/sfx),
-then adapt build.py. It is the finished build of a real reel: keep the machinery, rewrite the content (its
+generate the music (see "ElevenLabs audio"), then adapt build.py. It is the finished build of a real reel: keep the machinery, rewrite the content (its
 docstring lists which is which).
 - Which look where: `defaultLook` for the whole reel; a line that names a look switches its section.
 - Orbit and profile grid use the user's own reels (overlays.md: Apify post scraper with their handle, or files they

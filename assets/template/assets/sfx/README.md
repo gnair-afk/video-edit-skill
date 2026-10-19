@@ -1,8 +1,8 @@
 # Sound effects
 
-`scripts/setup.py` fills this folder on first run with six free sound effects (whoosh-short, pop, sparkle, click,
-click-soft, impact-bass-1). They come from Pixabay under the Pixabay Content License, which allows using them inside
-your videos but not redistributing the files on their own, so they are downloaded from the HyperFrames project
-instead of being stored in this repo.
+Six sound effects (whoosh-short, pop, sparkle, click, click-soft, impact-bass-1) are generated with ElevenLabs by
+`scripts/elevenlabs.py sfx-pack` (about 1,200 credits, once) and cached in the audio library. `scripts/setup.py`
+copies cached ones here on every run without spending credits. Generated files are not committed.
 
-To swap in your own, drop an `.mp3` here with the same name.
+To swap in your own, drop an `.mp3` here with the same name, or generate one:
+`PY scripts/elevenlabs.py sfx "<prompt>" --seconds 0.6 --name <name> --out assets/template/assets/sfx/<name>.mp3`

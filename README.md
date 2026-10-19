@@ -27,6 +27,8 @@ Film your talking-head clips on your phone, drop them in a folder, type `/video-
 - [ffmpeg](https://ffmpeg.org)
 - [Node.js 22 or newer](https://nodejs.org)
 - Python 3.10 or newer ([python.org](https://www.python.org/downloads/))
+- An [ElevenLabs](https://elevenlabs.io) account (Starter plan or higher) for sound effects and music.
+  Put the key in a `.env` file as `ELEVENLABS_API_KEY=...` (never commit it)
 - Optional: an [Apify](https://apify.com) account (free tier works) to pull your reels and profile stats automatically
 
 Don't worry about connecting these manually. On first run the skill checks your computer, figures out whether it's a Mac, a PC or Linux, and gives you the exact line to paste for anything that's missing.
@@ -122,7 +124,9 @@ Or in Terminal / PowerShell: `git -C "$HOME/.claude/skills/video-edit" pull`
 
 ## Credits
 
-Built on [HyperFrames](https://github.com/heygen-com/hyperframes) (HTML-to-video rendering and background removal) and [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Fonts from Google Fonts (SIL Open Font License). Sound effects from Pixabay, downloaded on setup.
+Built on [HyperFrames](https://github.com/heygen-com/hyperframes) (HTML-to-video rendering and background removal) and [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Fonts from Google Fonts (SIL Open Font License). Sound effects and background music from
+[ElevenLabs](https://elevenlabs.io) (your own API key, in a `.env` file; every generated sound is cached in an audio
+library, and the credit cost is logged before each call).
 
 ---
 

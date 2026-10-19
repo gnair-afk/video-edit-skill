@@ -1,6 +1,6 @@
 # Looks (exact values)
 
-All three live in `assets/template/build.py`. Accent everywhere: butter yellow `#FAE67A`.
+Bold, cool girl and cool dude live in `assets/template/build.py`; explainer (below) has its own reference build. Accent everywhere: butter yellow `#FAE67A`.
 The user's default look is in `config.json` (`defaultLook`); a line in the script that names a look
 ("you can get the cool girl aesthetic like this") switches that section to it.
 
@@ -28,6 +28,21 @@ Inspired by high-end studio interview edits: dark room, lit subject, tiny tracke
 - Motion: serif letters rise from a mask (`yPercent 115 -> 0`, stagger .028, expo.out) with a blur/scale settle; tracked words "track in" via `scaleX 1.45 -> 1` + blur (NOT letterSpacing, lint rejects it); quick .45s blur-to-focus into the section; slow push-ins (scale 1 -> 1.05 across a shot) instead of cut punches; one soft light sweep (screen blend) when the section opens.
 - Shots: wide, then a ~1.9x close-up cropped from the 4K original (alternate wide/close like a studio interview).
 - Tried and dropped: replacing the room with an AI-generated background (looked fake), black and white, crushed-dark grades, film grain.
+
+## Explainer (split screen; first built for a Hinglish interior-design reel)
+Calm, warm, "smart explainer" look: a cream card on top explains the idea while the speaker talks below.
+- Split: cream panel `#F3EEE4` from y 0 to 880 (soft shadow on its edge), speaker video shifted down ~350px inside
+  `#stage` so the head top sits at ~y 980. At the punch line, drop the panel and cut to a full-frame punch-in.
+- Panel content (inside y 220-880): a 104px rounded-square icon in terracotta `#D2583C` with a white line glyph,
+  a DM Serif Display title (128px, ink `#221C18`), a terracotta italic serif subtitle with an underline that draws
+  (scaleX), white pill chips (Inter 600 44px, map-pin SVG) that pop in on their spoken word.
+- Captions: white pill (`#fff`, Inter 600 50px, radius 99, soft shadow), centred on the seam (top 836) in the split,
+  on the chest (top ~1340, below the chin) full frame. The key word sits on a butter marker `#F7E35C` that wipes in.
+  Start every caption hidden (`gsap.set('.capw',{autoAlpha:0})`) or they all show at once.
+- Punch line: one DM Serif Display word (230px, cream `#FFF8EE`) BEHIND the head with a terracotta `?`/accent.
+- Sound: pops on chips, soft click on the underline, whoosh into the punch-in, a quiet bass hit on the punch word,
+  ElevenLabs lo-fi piano bed at 0.10. Voice track at ~0.8 so peaks land around -2.5 dB.
+- Reference build: `projects/test-01/build.py` in the user's studio folder.
 
 ## Fonts on hand (assets/template/assets/fonts, latin woff2 + fonts.css, SIL Open Font License)
 Inter 500/600, Inter Tight 800/900, Instrument Serif italic, DM Serif Display (+italic), Montserrat 500/600, JetBrains Mono 500, Caveat 600.

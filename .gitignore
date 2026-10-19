@@ -7,3 +7,8 @@ assets/template/assets/sfx/*.part
 *.log
 .DS_Store
 node_modules/
+
+# ElevenLabs: secrets and generated audio
+.env
+.env.*
+library/

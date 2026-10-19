@@ -66,3 +66,13 @@
   Whisper's default device ('auto') chose CUDA, but the CUDA toolkit is not installed. The scripts pass
   `device='cpu'`; do the same in any one-off `WhisperModel(...)` call (a re-transcribed snippet, for example).
 - Windows on ARM (Snapdragon): the transcription engine has no ARM build; setup.py asks for the x64 Python.
+- `hyperframes doctor` / render fail on "Chrome --version (ETIMEDOUT)": Windows Chrome opens a window instead of
+  printing its version. setup.py downloads HyperFrames' own Chrome Headless Shell and skillenv sets
+  `HYPERFRAMES_BROWSER_PATH` to it for every HF run. Firefox cannot be used: HyperFrames drives Chrome over CDP.
+- The `npx skills add` installer, run non-interactively, installs into ~50 other agents' folders (~/.adal, ~/.kiro...).
+  Install HyperFrames skills for Claude Code only, or clean up the junction-only folders it created.
+
+## Language
+- small.en / medium.en on a Hindi clip produced fluent English garbage ("If you are a builder of flats" x3). Set
+  config.json `language` (hi, auto...): the scripts then use the multilingual `medium` model. Hindi comes out in
+  Devanagari; write Roman-Hinglish captions by hand from it, with the word times.

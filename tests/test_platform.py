@@ -15,6 +15,7 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 import cutout  # noqa: E402
+import elevenlabs  # noqa: E402
 import setup  # noqa: E402
 import skillenv  # noqa: E402
 
@@ -219,7 +220,58 @@ class NvmParity(unittest.TestCase):
 
     def test_sfx_list(self):
         self.assertEqual(len(setup.SFX_NAMES), 6)
-        self.assertTrue(setup.SFX_URL.startswith('https://raw.githubusercontent.com/heygen-com/hyperframes/'))
+        self.assertEqual(sorted(setup.SFX_NAMES), sorted(elevenlabs.SFX_PACK))   # setup checks what sfx-pack makes
+
+
+class Language(unittest.TestCase):
+    def test_whisper_choice(self):
+        self.assertEqual(skillenv.whisper_choice('ingest', {}), ('small.en', 'en'))
+        self.assertEqual(skillenv.whisper_choice('cut', {'language': 'en'}), ('medium.en', 'en'))
+        self.assertEqual(skillenv.whisper_choice('ingest', {'language': 'hi'}), ('medium', 'hi'))   # never small for Hindi
+        self.assertEqual(skillenv.whisper_choice('cut', {'language': 'auto'}), ('medium', None))
+
+
+class ElevenLabs(unittest.TestCase):
+    def test_env_file_parsing(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, '.env')
+            with open(p, 'w', encoding='utf-8-sig') as f:   # Notepad may save a BOM
+                f.write('# comment\nELEVENLABS_API_KEY="sk_abc"\nOTHER=1\n')
+            self.assertEqual(elevenlabs.read_env_file(p)['ELEVENLABS_API_KEY'], 'sk_abc')
+        self.assertEqual(elevenlabs.read_env_file(os.path.join(ROOT, 'no-such.env')), {})
+
+    def test_placeholder_key_is_refused(self):
+        old = os.environ.pop('ELEVENLABS_API_KEY', None)
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                p = os.path.join(d, '.env')
+                with open(p, 'w', encoding='utf-8') as f:
+                    f.write('ELEVENLABS_API_KEY=paste-your-key-here\n')
+                with self.assertRaises(elevenlabs.Stop):
+                    elevenlabs.api_key({'envFile': p})
+        finally:
+            if old is not None:
+                os.environ['ELEVENLABS_API_KEY'] = old
+
+    def test_guard_stops_when_credits_low(self):
+        real = elevenlabs.credits_left
+        elevenlabs.credits_left = lambda key: (1000, 30000, 'starter')
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                cfg = {'audioLibrary': d, 'minCreditsLeft': 500}
+                with self.assertRaises(elevenlabs.Stop) as e:
+                    elevenlabs.guard(cfg, 'k', 'music', 900, False)   # 1000 - 900 < 500
+                self.assertEqual(e.exception.code, 3)
+                elevenlabs.guard(cfg, 'k', 'sfx', 200, False)        # 800 left: fine, no exception
+                with open(os.path.join(d, 'credits.log'), encoding='utf-8') as f:
+                    self.assertIn('estimated cost 900 credits', f.read())
+        finally:
+            elevenlabs.credits_left = real
+
+    def test_cache_key_is_stable(self):
+        a = elevenlabs.cache_key('sfx', {'text': 'pop', 'duration_seconds': .5})
+        self.assertEqual(a, elevenlabs.cache_key('sfx', {'duration_seconds': .5, 'text': 'pop'}))
+        self.assertNotEqual(a, elevenlabs.cache_key('sfx', {'text': 'pop', 'duration_seconds': .6}))
 
 
 class Cutout(unittest.TestCase):
