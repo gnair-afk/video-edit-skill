@@ -32,8 +32,8 @@ and go to Step 1 once it prints READY.
    - Your name (used on your Instagram profile insert)
    - Your Instagram handle (for your profile insert and to pull your reels for the orbit effect)
    - Default look: **bold** (kinetic words behind your head), **cool girl** (warm, yellow serif italic, your reels
-     orbiting you), **cool dude** (dark editorial, tracked caps + serif) or **explainer** (cream card on top, you
-     below, pill captions). Offer bold if they are unsure.
+     orbiting you), **cool dude** (dark editorial, tracked caps + serif), **explainer** (cream card on top, you
+     below, pill captions) or **beat** (minimal and fun, fast, every cut on a music beat). Offer bold if they are unsure.
    - The language they speak in (config.json `language`: `en`, `hi`, ... or `auto`) and, if not English, how
      captions should be written (`captionScript`, e.g. `roman-hinglish` = Hindi words in Latin letters). English-only
      Whisper models turn other languages into confident English nonsense, so never skip this.
@@ -146,6 +146,13 @@ Look at `work/sheets.jpg` (setups and angles) and read `transcript.txt` (per-cli
 - Post the EDL to the user as a short table (line, clip, look per section) and keep going; do not wait.
 
 ### 4. Assemble, transcribe, cut out
+**Beat look (or whenever cuts must hit the beat):** make the music BEFORE assembling: estimate the length from the
+EDL (+2 s), prompt with an explicit bpm, then snap the cuts (details in looks.md "Beat"):
+```bash
+PY SK/scripts/elevenlabs.py music "<genre, mood>, <N> bpm, steady kick, instrumental" --seconds <DUR+2> --out <project>/assets/music/bgm.mp3
+PY SK/scripts/beatgrid.py <project> --bpm <N> --snap     # edl cuts slide inside real pauses onto beats; writes beats.json
+```
+Then assemble as usual and confirm with `PY SK/scripts/beatgrid.py <project> --check` (every cut within 1 frame).
 ```bash
 PY SK/scripts/assemble.py <project>                 # aroll.mp4 clean 30fps CFR + segments.json with exact frames
 PY SK/scripts/transcribe_cut.py <project> "<names and keywords in the script>"
@@ -164,6 +171,8 @@ Copy `SK/assets/template/` into the project (build.py, hyperframes.json, package
 generate the music (see "ElevenLabs audio"), then adapt build.py. It is the finished build of a real reel: keep the machinery, rewrite the content (its
 docstring lists which is which).
 - Which look where: `defaultLook` for the whole reel; a line that names a look switches its section.
+- Beat look: every graphic change (image swap, card, slide whip, big word) is timed from `beats.json`, and the bgm
+  `<audio>` gets `data-media-start` = `musicStart`.
 - Orbit and profile grid use the user's own reels (overlays.md: Apify post scraper with their handle, or files they
   drop into `assets/reels/`).
 - Iterate from the project folder: `HF lint` (0 errors), then `PY build.py --safe`, then

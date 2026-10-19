@@ -44,6 +44,101 @@ Calm, warm, "smart explainer" look: a cream card on top explains the idea while 
   ElevenLabs lo-fi piano bed at 0.10. Voice track at ~0.8 so peaks land around -2.5 dB.
 - Reference build: `projects/test-01/build.py` in the user's studio folder.
 
+## Beat (minimal, fun, fast; every cut on the beat)
+Learned 2026-10-19 from four reference reels (files in the user's studio `references/ref1-4.mp4`, frames in
+`references/_analysis/`): ref1 text animation + beat cuts, ref2 hook + captions + sound, ref3 image placement +
+simpleness, ref4 motion graphics. It should feel like a tasteful indie edit, not a template: fast pace, calm screen.
+Fonts: Clash Display 700 + Playfair Display (+italic) from `projects/flats-03/assets/fonts/` (fonts-extra.css),
+Inter 600 for captions and word builds.
+
+**Pace and the beat (priority 1)**
+- Something changes on screen every 1-2 beats (0.5-1.2 s): a cut, a punch-in, an image swap, a slide change. The
+  refs measured 1-4 beats per shot; nothing static for more than ~3 s except a talking stretch with moving captions.
+- Every change lands ON a beat: cuts, image swaps, card in/out, slide whips, big words. Order of work: music first
+  (prompt with an explicit bpm, 100-120, steady kick), then `PY SK/scripts/beatgrid.py <project> --bpm <n> --snap`
+  moves the edl cuts inside real pauses onto the grid and picks the music start offset, then assemble, then
+  `--check` (every cut within 1 frame). build.py reads `beats.json` for every graphic change and plays the bgm
+  from `musicStart` (`data-media-start`).
+- A speech cut that cannot reach the grid (`OFF`): keep it, and put a graphic hit on the nearest beat next to it so
+  the eye reads the beat. Never cut into a word to force the beat.
+- Strong beats (`strong` in beats.json) take the big moments: section changes, the hook's punch word, the CTA.
+- Spoken words still pop on the spoken word (captions, word builds); transitions go on the beat.
+
+**Hook (first 2-3 s, ref2 + ref3)**
+- Frame 1 already says the topic: a stacked headline BEHIND the head (cutout), 3-4 short lowercase lines, left
+  aligned at x 70, Clash Display 700 ~150px, line-height .9, cream `#F6F1E7`, soft shadow. Lines pop in word by word
+  with the voice, then the whole stack drops away on a beat.
+- Optional: a row of 3-4 small thumbnails (app logos or photos of what's coming, 150px, radius 18) under the face,
+  each popping on a beat: a promise of the list to come.
+- Alternative hook (ref3): b-roll on the top half and one bold claim in a black label (`#111`, white Inter 600
+  40px, radius 10) on the seam, e.g. "koi bhi ye nahi kar raha".
+- One white matte flash of the cutout (2 frames) on the first beat is allowed, once.
+
+**Captions (ref3, ref2)**
+- No pill. 1-3 words at a time, white Inter 600 lowercase 58px, `text-shadow 0 4px 18px rgba(0,0,0,.35)`,
+  centred on the chest (top ~1180-1300, never on the face).
+- The key word of a line grows: Clash Display 700 130px under the small words, the small line overlapping its top
+  by ~15%. At most one big word per 2-3 s.
+- On paper slides and full-frame graphics captions shrink to Inter 600 34px under the graphic (ref2's tiny
+  captions), so the graphic stays the hero.
+- Word in: `y 18 -> 0, blur 6 -> 0, autoAlpha 0 -> 1`, .14 s power3.out; groups hard-cut out (no fades).
+
+**Text animation (ref1)**
+- Word builds: on paper slides the sentence builds one word per spoken word, words SCATTERED over 3-5 rows (not one
+  justified line), Inter 600 lowercase 54px in ink `#2A211B`, ONE word per phrase in Playfair Display italic at
+  2.2x size (the feeling word). Accent version: the whole phrase in terracotta `#C9573A`.
+- Over footage: the same build in white with a soft shadow, beside the head, never over it.
+- Huge word behind the head (ref1 "TOO", "WON'T"): Clash Display 700 caps ~360px, white, on a strong beat, one per
+  section, held 1-2 beats. Same readability formula as Bold (layout.md).
+- Paper slide exit: whip left on a beat (`x 0 -> -1080`, .22 s power3.in, blur 10px) while the next shot whips in
+  from the right, with a whoosh.
+- Photo strips behind the italic word (ref1 "supposed"): 3-4 thin cropped photo strips, 520x110, stacked with small
+  offsets, the italic word over them.
+
+**Images (ref3, simpleness)**
+ONE of these per moment, never two at once. While listing, images swap on beats (every 1-2 beats).
+- Top half: the photo fills x 0-1080, y 0-900 with a hard edge, no border, no radius; the speaker is reframed into
+  the lower half (edl `cy` / stage shift) so the head sits right under the seam. Captions stay on the chest.
+- Floating objects: 1-3 product cutouts (background removed, PNG), 260-340px, on the wall ABOVE the head,
+  `drop-shadow(0 18px 30px rgba(0,0,0,.25))`, pop in on a beat (scale .6 -> 1, back.out(2)), gone on the next cut.
+- Paper card: full-frame paper `#F2EFEA` with one photo centred (760px wide, square corners, soft shadow), the
+  caption small under it. For the "look at this" moment.
+- Triptych: three photos side by side across the top half (360 each, no gaps), changing one at a time on beats.
+- Real photos only (Pinterest, the user's own site photos, product shots). No AI images, no stock-looking 3D.
+
+**Motion graphics (ref4)**
+- Card mode for list items: the speaker video shrinks into a rounded card (`scale .78`, radius 48) on a sage
+  `#8A977A` or paper background with a long soft shadow (`0 60px 80px rgba(40,30,20,.28)`). A Playfair Display title
+  on top with the first letter of each word 1.5x bigger ("Series Navigator" style). Sage and paper alternate per
+  list item. In/out on a beat with a quick settle (scale 1.06 -> 1, .3 s expo.out).
+- Folder tabs: a stack of 3 rounded folders (charcoal `#3B3540`, lime `#C8CC5C`, maroon `#7A1F2B`) with small
+  "number 1/2/3" tabs, fanned slightly; the next one slides up on each beat as a list counter.
+- Sparkles: 2-3 eight-point stars (thin SVG, grey `#B9B4AC` on paper, white on footage), slow rotate (40 deg/s),
+  drifting a few px. Never a sparkle cloud.
+- Ghost word: the section's key word huge and blurred (`blur 6px`, 25% opacity) BEHIND a graphic.
+- Notification card: frosted iOS banner (`backdrop-filter blur(18px)`, white 55%, radius 26, app icon + two lines)
+  slides down to y 240, for news / updates.
+- Scribble circle: a hand-drawn SVG loop (2-3 overlapping ellipses, cream stroke 3px) drawing around one Playfair
+  italic word ("final result"), strokeDashoffset over .5 s.
+- App logo tile above the head (Simple Icons, rounded square 220px) pops a beat early on the named app.
+- Ransom title (once per reel at most): letters alternate Clash Display and Playfair italic at mixed sizes; a small
+  cursor taps two letters and they swap font on beats.
+
+**Sound (ref2)**
+- BGM: upbeat warm indie-pop / lo-fi house, 100-120 bpm, steady kick and claps, bright keys, no vocals. The refs mix
+  full and present (no silent gaps, peaks ~-1 dB). Music gain ~0.25-0.3, the voice still loudest.
+- SFX only on the beat changes: whoosh on slide whips, soft pop on image / word pops, click on cursor taps, a light
+  paper swish on paper slides, one bass hit on the hook's punch. Cached library sounds first.
+
+**Anti AI-slop rules (priority 2)**
+- One idea per screen. One accent colour per reel (terracotta OR sage family); the rest is paper, ink and white.
+- Two type families (Clash Display + Playfair Display italic) plus Inter for captions. No gradient text, glow, neon,
+  emoji, 3D icons, stock "tech" backgrounds, or a highlight on every word.
+- Real photos and real logos only. Hand-made touches (scribble circles, scattered words, paper) over perfect
+  symmetric templates.
+- Motion arrives quickly and settles: no bouncing loops, constant wobble or shake. Things land on a beat and hold.
+- Empty space is fine. More than 3 elements on top of the speaker at once: remove one.
+
 ## Fonts on hand (assets/template/assets/fonts, latin woff2 + fonts.css, SIL Open Font License)
 Inter 500/600, Inter Tight 800/900, Instrument Serif italic, DM Serif Display (+italic), Montserrat 500/600, JetBrains Mono 500, Caveat 600.
 Add more with the Google Fonts CSS2 API + a Chrome user agent, keep only the `/* latin */` blocks, `font-display:block`.
