@@ -194,3 +194,6 @@ re-assembling.
 
 ---
 Built by [@tenfoldmarc](https://instagram.com/tenfoldmarc). Follow for daily AI automation builds, real systems, not theory.
+
+
+See references/extras.md for the extra insert tools (motion-graphics, design-md, taste-skill, shadergradient).
