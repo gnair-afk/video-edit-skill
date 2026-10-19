@@ -138,6 +138,8 @@ ONE of these per moment, never two at once. While listing, images swap on beats 
   by repeating a 16-beat stretch joined exactly on a beat (same phase), and fade only the last 1 s.
 - End the reel with a 1 s held last frame (tpad clone on aroll + cutout): the renderer drops the final ~0.25 s of audio,
   and the last word must never be clipped.
+- Punch-ins: set cx PER SEGMENT from headpos.py (head x-span at 3 points), not one value for all; the speaker leans
+  differently in every take. Target head centre x 540. Check with a centre line on frames before the cutout.
 - Keep the speaker on screen while the caption build is running over him; a slide that cuts in mid-line breaks the
   flow (the user preferred footage there even with a small glance away).
 - Accent colour can come from the speaker's outfit (sample it from the footage): it ties the slides to the person.
