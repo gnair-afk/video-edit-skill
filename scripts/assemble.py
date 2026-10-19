@@ -56,14 +56,18 @@ def main():
     for k, s in enumerate(edl):
         f = src[s['clip']]
         sw, sh = size(f)
-        d = s['out'] - s['in']
+        # exact frame count: a 25 fps (or any non-30) source otherwise rounds every segment up to whole source frames
+        # and the cuts drift about a frame per segment (breaks beat-snapped cuts)
+        n = max(round((s['out'] - s['in']) * 30), 1)
+        d = n / 30
         out = os.path.join(work, f'seg_{k}.mp4')
         # vertical fill: scale to cover 1080x1920 then centre-crop (handles 4K 9:16 and odd phone sizes)
         vf = (f"{crop(s.get('zoom', 1), s.get('cx', .5), s.get('cy', .5), sw, sh)}"
               'scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,fps=30')
-        subprocess.run([FF, '-loglevel', 'error', '-y', '-ss', f"{s['in']:.3f}", '-t', f'{d:.3f}', '-i', f,
-                        '-map', '0:v:0', '-map', '0:a:0', '-vf', vf,
-                        '-af', f'afade=t=in:d=0.02,afade=t=out:st={d - 0.03:.3f}:d=0.03',   # no clicks at the joins
+        subprocess.run([FF, '-loglevel', 'error', '-y', '-ss', f"{s['in']:.3f}", '-t', f'{d + 0.2:.3f}', '-i', f,
+                        '-map', '0:v:0', '-map', '0:a:0', '-vf', vf, '-frames:v', str(n),
+                        '-af', f'atrim=0:{d:.4f},apad=whole_dur={d:.4f},'
+                               f'afade=t=in:d=0.02,afade=t=out:st={d - 0.03:.3f}:d=0.03',   # no clicks at the joins
                         '-c:v', 'libx264', '-crf', '14', '-preset', 'medium', '-pix_fmt', 'yuv420p',
                         '-c:a', 'pcm_s16le', '-ar', '48000', out], check=True)
         parts.append(out)

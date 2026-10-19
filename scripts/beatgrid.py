@@ -48,19 +48,26 @@ def onset_env(x):
     return e / (e.max() + 1e-9)
 
 
+def comb(env, period, step=0.25):
+    """Best mean onset strength of a rigid beat comb with this period (env frames), and its phase."""
+    best = (0.0, 0.0)
+    for ph in np.arange(0, period, step):
+        idx = np.round(np.arange(ph, len(env) - 1, period)).astype(int)
+        best = max(best, (float(env[idx].mean()), ph))
+    return best
+
+
 def grid(path, bpm_hint=None):
+    """Tempo from a rigid comb scan. Music models do not always play the bpm asked for (asked 110, got 122), so the
+    hint only widens/narrows the search (+-20%); it never forces the tempo."""
     x = pcm(path)
     env, dur, rate = onset_env(x), len(x) / SR, SR / HOP
-    ac = np.correlate(env, env, 'full')[len(env) - 1:]
-    lags = np.arange(1, len(ac) - 1)
-    bpm = 60 * rate / lags
-    lo, hi = (bpm_hint * .92, bpm_hint * 1.08) if bpm_hint else (70, 180)
-    ok = (bpm >= lo) & (bpm <= hi)
-    lag = lags[ok][np.argmax(ac[1:-1][ok])]
-    a, b, c = ac[lag - 1], ac[lag], ac[lag + 1]                 # parabolic peak = sub-frame tempo
-    period = (lag + 0.5 * (a - c) / (a - 2 * b + c + 1e-9)) / rate
-    phase = max(range(lag), key=lambda o: env[o::lag].sum()) / rate
-    beats, t, w = [], phase, int(0.06 * rate)                  # follow slight drift: re-centre on onsets +-60 ms
+    lo, hi = (bpm_hint / 1.2, bpm_hint * 1.2) if bpm_hint else (80, 160)
+    coarse = max(np.arange(lo, hi, 0.25), key=lambda q: comb(env, 60 * rate / q, 1.0)[0])
+    bpm = max(np.arange(coarse - .3, coarse + .3, .02), key=lambda q: comb(env, 60 * rate / q, 1.0)[0])
+    period = 60 / bpm
+    phase = comb(env, period * rate)[1] / rate
+    beats, t, w = [], phase, int(0.03 * rate)                  # follow slight drift: re-centre on onsets +-30 ms
     while t < dur - 0.05:
         i = int(round(t * rate))
         seg = env[max(i - w, 0): i + w + 1]
@@ -116,19 +123,18 @@ def plan(edl, quiet, g, max_shift):
         grow = min(o_hi - s['out'], max_shift) + min(s['in'] - i_lo, max_shift)
         shrink = min(s['out'] - o_lo, max_shift) + min(i_hi - s['in'], max_shift)
         end = t + s['out'] - s['in']
-        best = None
-        for pts, kind in ((full, 'beat'), (half, 'half')):
-            fit = [p for p in pts if -shrink - 1e-6 <= p - end <= grow + 1e-6 and p - t > 0.4]
-            if fit:
-                best = (min(fit, key=lambda p: abs(p - end)), kind)
-                break
+        # pace first: trimming is cheap, growing costs (it slows the reel and adds up); a half beat costs a little
+        fit = [(p, kind) for pts, kind in ((full, 'beat'), (half, 'half')) for p in pts
+               if -shrink - 1e-6 <= p - end <= grow + 1e-6 and p - t > 0.4]
+        best = min(fit, key=lambda f: abs(f[0] - end) + 0.8 * max(f[0] - end, 0) + (0.04 if f[1] == 'half' else 0),
+                   default=None)
         n = dict(s)
         if best:
             target = round(best[0] * FPS) / FPS
             delta = target - end
             tail = max(min(delta, min(o_hi - s['out'], max_shift)), -min(s['out'] - o_lo, max_shift))
             head = delta - tail
-            n['out'], n['in'] = round(s['out'] + tail, 3), round(s['in'] - head, 3)
+            n['out'], n['in'] = round(s['out'] + tail, 3), round(max(s['in'] - head, 0.0), 3)
             n['beatSnap'] = f"{best[1]} {delta:+.3f}s"
             hits += 2 if best[1] == 'beat' else 1
             end = target
@@ -195,8 +201,11 @@ def main():
     a = ap.parse_args()
     proj = skillenv.path_arg(a.project)
     music = a.music if os.path.isabs(a.music) else os.path.join(proj, a.music)
-    raw = grid(music, a.bpm)
     out = os.path.join(proj, 'beats.json')
+    if a.bpm is None and not a.snap and os.path.isfile(out):  # --check reuses the tempo found by --snap
+        with open(out, encoding='utf-8') as fh:
+            a.bpm = json.load(fh)['bpm']
+    raw = grid(music, a.bpm)
     if a.snap:
         g = snap(proj, raw, a.max_shift)
     elif os.path.isfile(out):                                 # keep the offset chosen by --snap

@@ -130,6 +130,14 @@ ONE of these per moment, never two at once. While listing, images swap on beats 
 - SFX only on the beat changes: whoosh on slide whips, soft pop on image / word pops, click on cursor taps, a light
   paper swish on paper slides, one bass hit on the hook's punch. Cached library sounds first.
 
+**Learned on the first beat reel (beat-01, 2026-10-19)**
+- Music models do not always play the bpm asked for (asked 110, got 122): beatgrid.py measures it; never trust the prompt.
+- Never show the speaker looking away from the camera: scan eye close-ups every 0.5 s (then 0.2 s around suspects) and
+  cover each look-away with a full-frame insert that starts on a beat (gradient word slide, photo split, moodboard grid).
+- Accent colour can come from the speaker's outfit (sample it from the footage): it ties the slides to the person.
+- The user's own photos for list items go INSIDE the card (voice over), title above animating letter by letter, no
+  captions there. Text over a busy room: cream type + a soft top shade, never ink.
+
 **Anti AI-slop rules (priority 2)**
 - One idea per screen. One accent colour per reel (terracotta OR sage family); the rest is paper, ink and white.
 - Two type families (Clash Display + Playfair Display italic) plus Inter for captions. No gradient text, glow, neon,
