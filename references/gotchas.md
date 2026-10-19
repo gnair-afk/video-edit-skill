@@ -24,6 +24,9 @@
 - Element ids cannot contain apostrophes ("i've" broke the whole inline script). Use keys like 'ive'.
 - `fromTo` renders its from-state immediately: pass `immediateRender:false` for anything hidden until its time.
 - Heavy backdrop-filter/blur on many elements can make captures go black; keep it to a few.
+- SVG "draw on" lines: do NOT use `pathLength="1"` + `strokeDasharray:1`. In the renderer the stroke stays hidden and
+  pops in whole at the end. Measure `path.getTotalLength()` in the page script and tween strokeDashoffset from that
+  length to 0 (sine.inOut, ~0.7 s reads as a pen stroke).
 
 ## Assets / tools
 - Node 22+ for HyperFrames, pinned `hyperframes@0.8.34`. Start it with `HF` (`PY "SK/scripts/hf.py" <command>`): it
