@@ -134,6 +134,12 @@ ONE of these per moment, never two at once. While listing, images swap on beats 
 - Music models do not always play the bpm asked for (asked 110, got 122): beatgrid.py measures it; never trust the prompt.
 - Never show the speaker looking away from the camera: scan eye close-ups every 0.5 s (then 0.2 s around suspects) and
   cover each look-away with a full-frame insert that starts on a beat (gradient word slide, photo split, moodboard grid).
+- ElevenLabs music tracks fade out on their own ~3 s before the asked length: measure the RMS, then extend the bed
+  by repeating a 16-beat stretch joined exactly on a beat (same phase), and fade only the last 1 s.
+- End the reel with a 1 s held last frame (tpad clone on aroll + cutout): the renderer drops the final ~0.25 s of audio,
+  and the last word must never be clipped.
+- Keep the speaker on screen while the caption build is running over him; a slide that cuts in mid-line breaks the
+  flow (the user preferred footage there even with a small glance away).
 - Accent colour can come from the speaker's outfit (sample it from the footage): it ties the slides to the person.
 - The user's own photos for list items go INSIDE the card (voice over), title above animating letter by letter, no
   captions there. Text over a busy room: cream type + a soft top shade, never ink.
